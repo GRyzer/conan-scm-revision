@@ -21,6 +21,11 @@ class scmRevisionRecipe(ConanFile):
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "CMakeLists.txt", "src/*", "data/gitRevision.cpp.in"
+    
+    def export(self):
+        git = Git(self, self.recipe_folder)
+        # save the url and commit in conandata.yml
+        git.coordinates_to_conandata()
 
     def layout(self):
         cmake_layout(self)
@@ -30,23 +35,10 @@ class scmRevisionRecipe(ConanFile):
         deps.generate()
         tc = CMakeToolchain(self)
         tc.generate()
-
-    def find_git_commit(self):
-        git = Git(self, self.recipe_folder)
-        try:
-            scm_revision = git.get_commit()
-            if git.is_dirty():
-                scm_revision += "-dirty"
-        except ConanException:
-            scm_revision = os.getenv("GIT_COMMIT")
-            if scm_revision is None:
-                scm_revision = "unknown"
-        return scm_revision
     
     def build(self):
-        scm_revision = self.find_git_commit()
         cmake = CMake(self)
-        cmake_variables = { "scm_revision": scm_revision }
+        cmake_variables = { "scm_revision": self.conan_data["scm"]["commit"] }
         cmake.configure(variables=cmake_variables)
         cmake.build()
 
